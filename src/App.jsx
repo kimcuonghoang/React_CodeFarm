@@ -1,105 +1,102 @@
-import React, { useState } from "react";
-import { students } from "./dataStudents";
+import React, { useEffect, useState } from "react";
+
 const App = () => {
-  const [filterRank, setRank] = useState("");
-  const [sort, setSort] = useState("");
+  const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(12);
   const [search, setSearch] = useState("");
-  function handleSort(e) {
-    setSort(e.target.value);
-  }
-  function handleSearch(e) {
+  const [sortOrder, setSortOrder] = useState("");
+
+  useEffect(() => {
+    fetch("https://dummyjson.com/products?limit=100")
+      .then((res) => res.json())
+      .then((data) => {
+        setProducts(data.products);
+        setFilteredProducts(data.products);
+      });
+  }, []);
+
+  useEffect(() => {
+    let filtered = [...products];
+
+    if (search) {
+      filtered = filtered.filter((product) =>
+        product.title.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    if (sortOrder === "asc") {
+      filtered.sort((a, b) => a.price - b.price);
+    } else if (sortOrder === "desc") {
+      filtered.sort((a, b) => b.price - a.price);
+    }
+
+    setFilteredProducts(filtered);
+  }, [search, sortOrder, products]);
+
+  const totalPages = Math.ceil(filteredProducts.length / limit);
+  const startIndex = (page - 1) * limit;
+  const currentProducts = filteredProducts.slice(
+    startIndex,
+    startIndex + limit
+  );
+
+  const handlePrev = () => setPage((prev) => Math.max(prev - 1, 1));
+  const handleNext = () => setPage((prev) => Math.min(prev + 1, totalPages));
+  function handleChange(e) {
     setSearch(e.target.value);
   }
-  function handleRank(e) {
-    setRank(e.target.value);
+  function handleSort(e) {
+    setSortOrder(e.target.value);
   }
-  function diemTB(item) {
-    const avg = ((+item.math + +item.english + +item.literature) / 3).toFixed(
-      1
-    );
-    let rank = "";
-    if (avg >= 8) rank = "Giỏi";
-    else if (avg >= 6.5) rank = "Khá";
-    else if (avg >= 5) rank = "Trung bình";
-    else rank = "Yếu";
-    return { avg, rank };
+  function handleLimit(e) {
+    setLimit(parseInt(e.target.value));
+    setPage(1);
   }
   return (
-    <>
-      <input
-        type="text"
-        placeholder="search students"
-        onChange={handleSearch}
-      />
+    <div>
+      <h1>Danh sách sản phẩm</h1>
 
-      <select onChange={handleSort}>
-        <option value="">Sắp xếp theo</option>
-        <option value="desc">Cao → Thấp</option>
-        <option value="asc">Thấp → Cao</option>
-      </select>
+      <div>
+        <input
+          type="text"
+          placeholder="search product..."
+          value={search}
+          onChange={handleChange}
+        />
 
-      <select onChange={handleRank}>
-        <option value="">Lọc theo học lực</option>
-        <option value="Giỏi">Giỏi</option>
-        <option value="Khá">Khá</option>
-        <option value="Trung bình">Trung bình</option>
-        <option value="Yếu">Yếu</option>
-      </select>
+        <select value={sortOrder} onChange={handleSort}>
+          <option value="">Sắp xếp theo giá</option>
+          <option value="asc">Giá tăng dần</option>
+          <option value="desc">Giá giảm dần</option>
+        </select>
 
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Math</th>
-            <th>literature</th>
-            <th>english</th>
-            <th>Điểm TB</th>
-            <th>Học lực</th>
-          </tr>
-        </thead>
-        <tbody>
-          {students
-            .filter((item) => {
-              const { rank } = diemTB(item);
-              const matchRank = filterRank === "" || filterRank === rank;
-              const matchSearch = item.name
-                .toLowerCase()
-                .includes(search.toLowerCase());
-              return matchRank && matchSearch;
-            })
-            .sort((a, b) => {
-              const avgA = ((+a.math + +a.english + +a.literature) / 3).toFixed(
-                1
-              );
-              const avgB = ((+b.math + +b.english + +b.literature) / 3).toFixed(
-                1
-              );
-              if (sort === "") {
-                return 0;
-              } else if (sort === "desc") {
-                return avgB - avgA;
-              } else {
-                return avgA - avgB;
-              }
-            })
-            .map((item) => {
-              const { avg, rank } = diemTB(item);
-              return (
-                <tr key={item.id}>
-                  <td>{item.id}</td>
-                  <td>{item.name}</td>
-                  <td>{item.math}</td>
-                  <td>{item.literature}</td>
-                  <td>{item.english}</td>
-                  <td>{avg}</td>
-                  <td>{rank}</td>
-                </tr>
-              );
-            })}
-        </tbody>
-      </table>
-    </>
+        <select value={limit} onChange={handleLimit}>
+          <option value={6}>6</option>
+          <option value={12}>12</option>
+          <option value={24}>24</option>
+        </select>
+      </div>
+
+      <div>
+        {currentProducts.map((item) => (
+          <div key={item.id}>
+            <img src={item.thumbnail} />
+            <h2>{item.title}</h2>
+            <p>${item.price}</p>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <button onClick={handlePrev}>Trước</button>
+
+        <span>{page}</span>
+
+        <button onClick={handleNext}>Sau</button>
+      </div>
+    </div>
   );
 };
 
